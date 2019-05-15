@@ -1,0 +1,56 @@
+version: "3"
+
+services:
+
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: symfony
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+    command: mysqld --sql_mode="STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
+    ports:
+      - 3306:3306
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+
+  redis:
+    image: redis:4.0-alpine
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - ./data/redis:/data
+
+  php-fpm:
+    build:
+      context: ./project/docker
+      dockerfile: php-fpm-alpine.docker
+    restart: always
+    volumes:
+      - ./project:/var/www/project
+    depends_on:
+      - db
+      - redis
+
+  nginx:
+    build:
+      context: ./project/docker
+      dockerfile: nginx-alpine.docker
+    restart: always
+    volumes:
+      - ./project:/var/www/project
+    ports:
+      - 80:80
+    depends_on:
+      - php-fpm
+    tty: true
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
